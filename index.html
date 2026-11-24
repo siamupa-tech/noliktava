@@ -4,12 +4,65 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Alus Muiža & Gust. — Noliktavu Loģistika</title>
-    <link rel="icon" type="image/png" href="logo.png">
-    <link rel="apple-touch-icon" href="logo.png">
+
+    <!-- ========================================================= -->
+    <!-- TELEFONA IKONA AR ROZĀ FONU (MAINI KRĀSU PIE ICON_BG_COLOR) -->
+    <!-- ========================================================= -->
+    <link id="dynamic-favicon" rel="icon" type="image/png" href="logo.png">
+    <link id="dynamic-touch-icon" rel="apple-touch-icon" href="logo.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Noliktava"> 
+    <meta name="apple-mobile-web-app-title" content="Noliktava">
+    <script>
+        (function() {
+            const ICON_BG_COLOR = '#f472b6'; // <-- ŠEIT MAINI IKONAS FONA KRĀSU! (#f472b6 rozā, #ec4899 koši rozā, #f9a8d4 gaiši rozā)
+            const ICON_PADDING = 50;         // Atstarpe ap logo malām
+
+            function buildPinkIcon(drawFn) {
+                const canvas = document.createElement('canvas');
+                canvas.width = 512;
+                canvas.height = 512;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = ICON_BG_COLOR;
+                ctx.fillRect(0, 0, 512, 512);
+                drawFn(ctx);
+                const finalIcon = canvas.toDataURL('image/png');
+                window._generatedAppIcon = finalIcon;
+                const fav = document.getElementById('dynamic-favicon');
+                const touch = document.getElementById('dynamic-touch-icon');
+                if (fav) fav.href = finalIcon;
+                if (touch) touch.href = finalIcon;
+                const pinLogo = document.getElementById('pin-logo-img');
+                if (pinLogo) {
+                    pinLogo.src = finalIcon;
+                    pinLogo.style.display = 'block';
+                }
+                const pinFallback = document.getElementById('pin-fallback-icon');
+                if (pinFallback) pinFallback.style.display = 'none';
+            }
+
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = function() {
+                buildPinkIcon(function(ctx) {
+                    const size = 512 - (ICON_PADDING * 2);
+                    ctx.drawImage(img, ICON_PADDING, ICON_PADDING, size, size);
+                });
+            };
+            img.onerror = function() {
+                // Ja logo.png vēl nav ielikts GitHubā, uzzīmē rozā ikonu ar 🍺 simbolu
+                buildPinkIcon(function(ctx) {
+                    ctx.font = '260px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('🍺', 256, 270);
+                });
+            };
+            img.src = 'logo.png';
+        })();
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -66,57 +119,47 @@
     </style>
 </head>
 <body class="min-h-screen flex justify-center bg-slate-950 text-slate-100">
-    <!-- VIENKĀRŠĀ PIN PAROLES AIZSARDZĪBA -->
 
+    <!-- ========================================================= -->
+    <!-- VIENKĀRŠĀ PIN PAROLES AIZSARDZĪBA PIRMS IEIEŠANAS         -->
+    <!-- ========================================================= -->
     <div id="pin-lock-screen" class="fixed inset-0 z-[999] bg-[#050811] flex flex-col items-center justify-center p-6">
-        <div class="w-full max-w-xs bg-[#1e293b] border-2 border-amber-500/60 rounded-3xl p-6 text-center space-y-4 shadow-2xl">
-            <img src="logo.png" onerror="this.style.display='none'; document.getElementById('pin-fallback-icon').style.display='block';" class="w-20 h-20 mx-auto rounded-2xl object-cover shadow-lg">
-            <div id="pin-fallback-icon" style="display:none;" class="text-5xl">🍺</div>
+        <div class="w-full max-w-xs bg-[#1e293b] border-2 border-pink-400/60 rounded-3xl p-6 text-center space-y-4 shadow-2xl">
+            <img id="pin-logo-img" src="logo.png" style="background-color: #f472b6;" onerror="if(window._generatedAppIcon){this.src=window._generatedAppIcon;}else{this.style.display='none'; document.getElementById('pin-fallback-icon').style.display='flex';}" class="w-20 h-20 mx-auto rounded-2xl object-contain p-2 shadow-lg">
+            <div id="pin-fallback-icon" style="display:none; background-color: #f472b6;" class="w-20 h-20 mx-auto rounded-2xl items-center justify-center text-4xl shadow-lg">🍺</div>
             <div>
                 <h1 class="text-lg font-black text-white">Alus Muiža & Gust.</h1>
                 <p class="text-xs text-slate-400 mt-1">Ievadi komandas PIN kodu</p>
             </div>
             <input id="pin-input" type="password" inputmode="numeric" maxlength="6" placeholder="••••"
                 onkeydown="if(event.key==='Enter') checkAppPin()"
-                class="w-full bg-slate-950 border-2 border-slate-700 rounded-2xl py-3.5 text-center text-2xl font-black tracking-[0.5em] text-amber-400 focus:outline-none focus:border-amber-400">
+                class="w-full bg-slate-950 border-2 border-slate-700 rounded-2xl py-3.5 text-center text-2xl font-black tracking-[0.5em] text-amber-400 focus:outline-none focus:border-pink-400">
             <p id="pin-error" class="hidden text-xs font-bold text-rose-400">Nepareizs kods! Mēģini vēlreiz.</p>
-            <button onclick="checkAppPin()" class="w-full py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm shadow-lg">
+            <button onclick="checkAppPin()" class="tactile w-full py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm shadow-lg">
                 🔓 Ieiet aplikācijā
             </button>
         </div>
     </div>
     <script>
+        const SECRET_APP_PIN = '2580'; // <-- ŠEIT MAINI KOMANDAS PIN KODU!
 
-        const SECRET_APP_PIN = '2580'; // <-- ŠEIT IERAKSTI SAVU VĒLAMO PIN KODU!
-
-
-
+        if (window._generatedAppIcon) {
+            const pImg = document.getElementById('pin-logo-img');
+            if (pImg) pImg.src = window._generatedAppIcon;
+        }
         if (localStorage.getItem('am_gust_pin_ok') === SECRET_APP_PIN) {
-
             document.getElementById('pin-lock-screen').style.display = 'none';
-
         }
-
         function checkAppPin() {
-
             const val = document.getElementById('pin-input').value.trim();
-
             if (val === SECRET_APP_PIN) {
-
                 localStorage.setItem('am_gust_pin_ok', SECRET_APP_PIN);
-
                 document.getElementById('pin-lock-screen').style.display = 'none';
-
             } else {
-
                 document.getElementById('pin-error').classList.remove('hidden');
-
                 document.getElementById('pin-input').value = '';
-
             }
-
         }
-
     </script>
 
     <!-- Galvenais aplikācijas konteiners ar dinamisku telpas krāsu un sānu rāmi -->

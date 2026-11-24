@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Alus Muiža & Gust. — Noliktavu Loģistika</title>
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="apple-touch-icon" href="logo.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Noliktava"> 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -60,6 +66,58 @@
     </style>
 </head>
 <body class="min-h-screen flex justify-center bg-slate-950 text-slate-100">
+    <!-- VIENKĀRŠĀ PIN PAROLES AIZSARDZĪBA -->
+
+    <div id="pin-lock-screen" class="fixed inset-0 z-[999] bg-[#050811] flex flex-col items-center justify-center p-6">
+        <div class="w-full max-w-xs bg-[#1e293b] border-2 border-amber-500/60 rounded-3xl p-6 text-center space-y-4 shadow-2xl">
+            <img src="logo.png" onerror="this.style.display='none'; document.getElementById('pin-fallback-icon').style.display='block';" class="w-20 h-20 mx-auto rounded-2xl object-cover shadow-lg">
+            <div id="pin-fallback-icon" style="display:none;" class="text-5xl">🍺</div>
+            <div>
+                <h1 class="text-lg font-black text-white">Alus Muiža & Gust.</h1>
+                <p class="text-xs text-slate-400 mt-1">Ievadi komandas PIN kodu</p>
+            </div>
+            <input id="pin-input" type="password" inputmode="numeric" maxlength="6" placeholder="••••"
+                onkeydown="if(event.key==='Enter') checkAppPin()"
+                class="w-full bg-slate-950 border-2 border-slate-700 rounded-2xl py-3.5 text-center text-2xl font-black tracking-[0.5em] text-amber-400 focus:outline-none focus:border-amber-400">
+            <p id="pin-error" class="hidden text-xs font-bold text-rose-400">Nepareizs kods! Mēģini vēlreiz.</p>
+            <button onclick="checkAppPin()" class="w-full py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm shadow-lg">
+                🔓 Ieiet aplikācijā
+            </button>
+        </div>
+    </div>
+    <script>
+
+        const SECRET_APP_PIN = '2580'; // <-- ŠEIT IERAKSTI SAVU VĒLAMO PIN KODU!
+
+
+
+        if (localStorage.getItem('am_gust_pin_ok') === SECRET_APP_PIN) {
+
+            document.getElementById('pin-lock-screen').style.display = 'none';
+
+        }
+
+        function checkAppPin() {
+
+            const val = document.getElementById('pin-input').value.trim();
+
+            if (val === SECRET_APP_PIN) {
+
+                localStorage.setItem('am_gust_pin_ok', SECRET_APP_PIN);
+
+                document.getElementById('pin-lock-screen').style.display = 'none';
+
+            } else {
+
+                document.getElementById('pin-error').classList.remove('hidden');
+
+                document.getElementById('pin-input').value = '';
+
+            }
+
+        }
+
+    </script>
 
     <!-- Galvenais aplikācijas konteiners ar dinamisku telpas krāsu un sānu rāmi -->
     <div id="app-shell" class="room-transition w-full max-w-lg min-h-screen bg-[#0f172a] flex flex-col relative shadow-2xl border-x-4 border-amber-500/70 pb-28 overflow-hidden">

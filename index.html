@@ -1850,8 +1850,20 @@ Prusaks Atentāts Tomātu Čili Gose 0.5L 3.6% [176];🍺 Alus & Roll-bārs;supp
             } catch (e) {}
         }
 
+        function isPreviewSandboxEnv() {
+            try {
+                if (window.self !== window.top) return true;
+            } catch (e) {
+                return true;
+            }
+            const proto = window.location.protocol || '';
+            const host = window.location.hostname || '';
+            return proto === 'blob:' || host.includes('usercontent.goog') || host === '';
+        }
+
         function setupSupabaseRealtimeSubscription() {
-            if (!supabaseClient || window._sbRealtimeChannel) return;
+            // Canvas priekšskatījumā wss:// WebSocket nav atļauts — tur sinhronizācija notiek caur HTTPS REST
+            if (!supabaseClient || window._sbRealtimeChannel || isPreviewSandboxEnv()) return;
             try {
                 window._sbRealtimeChannel = supabaseClient
                     .channel('am_gust_live_sync_mupa')
@@ -4718,12 +4730,12 @@ Fever-Tree;19</textarea>
             // 4. Automātiski saslēdzamies ar iebūvēto Supabase un novelkam jaunākās komandas izmaiņas
             connectSupabaseFromUI(true);
 
-            // 5. Fona sinhronizācija ik pēc 15s un brīdī, kad atbloķē telefonu
+            // 5. Fona HTTPS sinhronizācija ik pēc 10s un brīdī, kad atbloķē telefonu
             setInterval(() => {
                 if (!simulateOfflineZone && navigator.onLine && isCloudConnected) {
                     pullFullSnapshotFromCloud(true);
                 }
-            }, 15000);
+            }, 10000);
 
             document.addEventListener('visibilitychange', () => {
                 if (document.visibilityState === 'visible') {

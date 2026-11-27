@@ -326,14 +326,28 @@
                 <div id="central-wh-panel" class="hidden bg-[#1e293b] border border-slate-700 rounded-2xl p-4 space-y-3.5 shadow-lg"></div>
 
                 <!-- Maiņas / Pasākuma čekliste (Lielās pirkstam draudzīgās pogas) -->
-                <div id="checklist-panel" class="bg-[#1e293b] border border-slate-700 rounded-2xl p-3.5 space-y-3 shadow-lg">
-                    <div class="flex items-center justify-between gap-2">
+            <div id="checklist-panel" class="bg-[#1e293b] border border-slate-700 rounded-2xl p-3.5 space-y-3 shadow-lg">
+                    <div class="flex items-center justify-between gap-2 flex-wrap">
                         <h3 id="checklist-heading" class="text-sm font-black text-white">✅ Maiņas čekliste</h3>
-                        <span id="checklist-progress" class="px-2.5 py-1 rounded-full bg-slate-900 border border-slate-700 text-xs font-black text-emerald-400">0/0</span>
+                        <div class="flex items-center gap-1.5">
+                            <button id="checklist-edit-btn" onclick="toggleChecklistEditMode()" class="tactile px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-[11px] font-extrabold text-amber-300">
+                                ✏️ Labot
+                            </button>
+                            <span id="checklist-progress" class="px-2.5 py-1 rounded-full bg-slate-900 border border-slate-700 text-xs font-black text-emerald-400">0/0</span>
+                        </div>
                     </div>
-
+                    <div id="checklist-quick-add" class="hidden bg-slate-900/95 border border-amber-400/50 rounded-xl p-2.5 space-y-2">
+                        <div class="text-[11px] font-extrabold text-amber-300">➕ Pievienot jaunu čeklistes punktu šai telpai:</div>
+                        <div class="flex items-center gap-2">
+                            <input id="quick-chk-input" type="text" placeholder="Piem., Pārbaudīt salvetes un sveces uz galdiem"
+                                onkeydown="if(event.key==='Enter') addChecklistItemFromInput('ACTIVE', 'quick-chk-input')"
+                                class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-semibold focus:outline-none focus:border-amber-400">
+                            <button onclick="addChecklistItemFromInput('ACTIVE', 'quick-chk-input')" class="tactile px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shrink-0 shadow">
+                                + Pievienot
+                            </button>
+                        </div>
+                    </div>
                     <div id="checklist-items-wrap" class="space-y-2.5"></div>
-
                     <button onclick="markBarReadyForShift()" class="tactile w-full min-h-[56px] rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm px-4 py-3.5 shadow-xl">
                         🚀 Apstiprināt: Telpa gatava maiņai / pasākumam!
                     </button>
@@ -2681,7 +2695,245 @@ Prusaks Atentāts Tomātu Čili Gose 0.5L 3.6% [176];🍺 Alus & Roll-bārs;supp
                 renderSodien();
             }
         }
+function triggerUniversalSave(msg) {
 
+            if (typeof saveState === 'function') {
+
+                saveState(msg || null);
+
+            } else {
+
+                if (msg && typeof logEvent === 'function') logEvent(msg);
+
+                if (typeof persistStateAndScheduleCloudPush === 'function') persistStateAndScheduleCloudPush();
+
+            }
+
+        }
+
+
+
+        let checklistEditMode = false;
+
+        let vadibaChecklistTarget = 'am_bar';
+
+
+
+        const CHECKLIST_TARGETS = [
+
+            { key: 'am_bar', label: '🍺 1. A.M bārs — Maiņas čekliste' },
+
+            { key: 'gust_bar', label: '🍸 3. Gust.bārs — Maiņas čekliste' },
+
+            { key: 'gust_wine', label: '🍷 5. Gust.Wine — Maiņas čekliste' },
+
+            { key: 'venue_melomaniaki', label: '🎪 6. Gust.Venue — Melomaniaki šablons' },
+
+            { key: 'venue_koncerts', label: '🎸 6. Gust.Venue — Koncerta šablons' },
+
+            { key: 'venue_bankets', label: '🥂 6. Gust.Venue — Banketa šablons' }
+
+        ];
+
+
+
+        function escapeHtmlAttr(str) {
+
+            return String(str || '')
+
+                .replace(/&/g, '&amp;')
+
+                .replace(/"/g, '&quot;')
+
+                .replace(/</g, '&lt;')
+
+                .replace(/>/g, '&gt;');
+
+        }
+
+
+
+        function resolveChecklistTargetKey(targetKey) {
+
+            if (targetKey === 'ACTIVE') {
+
+                return activeLocId === 'gust_venue' ? ('venue_' + venueTemplate) : activeLocId;
+
+            }
+
+            return targetKey;
+
+        }
+
+
+
+        function getChecklistArrayByTarget(targetKey) {
+
+            const resolved = resolveChecklistTargetKey(targetKey);
+
+            if (resolved.indexOf('venue_') === 0) {
+
+                const tpl = resolved.replace('venue_', '');
+
+                if (!venueTemplateChecklists[tpl]) venueTemplateChecklists[tpl] = [];
+
+                return venueTemplateChecklists[tpl];
+
+            }
+
+            if (!shiftChecklists[resolved]) shiftChecklists[resolved] = [];
+
+            return shiftChecklists[resolved];
+
+        }
+
+
+
+        function getChecklistTargetTitle(targetKey) {
+
+            const resolved = resolveChecklistTargetKey(targetKey);
+
+            const found = CHECKLIST_TARGETS.find(t => t.key === resolved);
+
+            return found ? found.label : resolved;
+
+        }
+
+
+
+        function toggleChecklistEditMode() {
+
+            checklistEditMode = !checklistEditMode;
+
+            renderSodien();
+
+        }
+
+
+
+        function setVadibaChecklistTarget(val) {
+
+            vadibaChecklistTarget = val;
+
+            renderVadiba();
+
+        }
+
+
+
+        function addChecklistItemFromInput(targetKey, inputId) {
+
+            const el = document.getElementById(inputId);
+
+            const text = (el ? el.value : '').trim();
+
+            if (!text) {
+
+                showToast('Ieraksti čeklistes punkta tekstu!', '⚠️');
+
+                return;
+
+            }
+
+            const list = getChecklistArrayByTarget(targetKey);
+
+            list.push({
+
+                id: 'chk_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+
+                text: text,
+
+                done: false
+
+            });
+
+            if (el) el.value = '';
+
+            triggerUniversalSave('✅ Pievienots čeklistes punkts (' + getChecklistTargetTitle(targetKey) + '): ' + text);
+
+            showToast('Jauns punkts pievienots čeklistei!', '✅');
+
+            renderAll();
+
+        }
+
+
+
+        function updateChecklistItemText(targetKey, itemId, newText) {
+
+            const cleaned = String(newText || '').trim();
+
+            if (!cleaned) {
+
+                renderAll();
+
+                return;
+
+            }
+
+            const list = getChecklistArrayByTarget(targetKey);
+
+            const item = list.find(i => i.id === itemId);
+
+            if (item && item.text !== cleaned) {
+
+                item.text = cleaned;
+
+                triggerUniversalSave('✏️ Labots čeklistes punkts: ' + cleaned);
+
+                showToast('Čeklistes teksts saglabāts!', '💾');
+
+                renderAll();
+
+            }
+
+        }
+
+
+
+        function moveChecklistItem(targetKey, itemId, direction) {
+
+            const list = getChecklistArrayByTarget(targetKey);
+
+            const idx = list.findIndex(i => i.id === itemId);
+
+            if (idx === -1) return;
+
+            const newIdx = idx + direction;
+
+            if (newIdx < 0 || newIdx >= list.length) return;
+
+            const temp = list[idx];
+
+            list[idx] = list[newIdx];
+
+            list[newIdx] = temp;
+
+            triggerUniversalSave();
+
+            renderAll();
+
+        }
+
+
+
+        function deleteChecklistItem(targetKey, itemId) {
+
+            const list = getChecklistArrayByTarget(targetKey);
+
+            const idx = list.findIndex(i => i.id === itemId);
+
+            if (idx === -1) return;
+
+            const removed = list.splice(idx, 1)[0];
+
+            triggerUniversalSave('🗑️ Izdzēsts čeklistes punkts: ' + removed.text);
+
+            showToast('Punkts izdzēsts no čeklistes!', '🗑️');
+
+            renderAll();
+
+        }
         function markBarReadyForShift() {
             const list = activeLocId === 'gust_venue'
                 ? venueTemplateChecklists[venueTemplate]
@@ -2852,27 +3104,100 @@ Prusaks Atentāts Tomātu Čili Gose 0.5L 3.6% [176];🍺 Alus & Roll-bārs;supp
                 checklistPanel.classList.remove('hidden');
 
                 const list = activeLocId === 'gust_venue'
+
                     ? venueTemplateChecklists[venueTemplate]
+
                     : (shiftChecklists[activeLocId] || []);
+
                 const doneCount = list.filter(i => i.done).length;
 
+
+
                 document.getElementById('checklist-heading').textContent = activeLocId === 'gust_venue'
+
                     ? `🎪 Pasākuma čekliste (${venueTemplate})`
+
                     : `✅ ${loc.shortTitle} — Maiņas čekliste`;
+
                 document.getElementById('checklist-progress').textContent = `${doneCount}/${list.length}`;
 
-                document.getElementById('checklist-items-wrap').innerHTML = list.map(item => `
-                    <button onclick="toggleChecklistItem('${item.id}')" class="tactile w-full min-h-[64px] text-left rounded-2xl px-4 py-3.5 border-2 flex items-center justify-between gap-3.5 shadow ${
-                        item.done
-                            ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-100'
-                            : 'bg-slate-900/95 border-slate-700 hover:border-slate-500 text-white'
-                    }">
-                        <span class="text-sm font-extrabold leading-snug break-words ${item.done ? 'line-through opacity-75' : ''}">${item.text}</span>
-                        <span class="w-11 h-11 rounded-xl flex items-center justify-center text-xl font-black shrink-0 ${
-                            item.done ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 border-2 border-slate-600 text-slate-500'
-                        }">${item.done ? '✓' : ''}</span>
-                    </button>
-                `).join('');
+
+
+                const editBtn = document.getElementById('checklist-edit-btn');
+
+                const quickAddBox = document.getElementById('checklist-quick-add');
+
+                if (editBtn) {
+
+                    editBtn.textContent = checklistEditMode ? '✓ Gatavs' : '✏️ Labot';
+
+                    editBtn.className = checklistEditMode
+
+                        ? 'tactile px-2.5 py-1 rounded-lg bg-amber-400 text-slate-950 font-black text-[11px] shadow'
+
+                        : 'tactile px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-[11px] font-extrabold text-amber-300';
+
+                }
+
+                if (quickAddBox) {
+
+                    quickAddBox.classList.toggle('hidden', !checklistEditMode);
+
+                }
+
+
+
+                if (list.length === 0) {
+
+                    document.getElementById('checklist-items-wrap').innerHTML = `
+
+                        <div class="bg-slate-900/80 border border-dashed border-slate-700 rounded-xl p-4 text-center text-xs font-bold text-slate-400">
+
+                            Šajā čeklistē vēl nav punktu. Nospied <strong>✏️ Labot</strong>, lai pievienotu!
+
+                        </div>`;
+
+                } else if (checklistEditMode) {
+
+                    document.getElementById('checklist-items-wrap').innerHTML = list.map((item, idx) => `
+
+                        <div class="bg-slate-900/95 border border-amber-400/40 rounded-2xl p-2.5 flex items-center gap-2 shadow">
+
+                            <div class="flex flex-col gap-1 shrink-0">
+
+                                <button onclick="moveChecklistItem('ACTIVE', '${item.id}', -1)" ${idx === 0 ? 'disabled' : ''} class="w-7 h-7 rounded-lg bg-slate-800 text-slate-300 text-xs font-black disabled:opacity-30">↑</button>
+
+                                <button onclick="moveChecklistItem('ACTIVE', '${item.id}', 1)" ${idx === list.length - 1 ? 'disabled' : ''} class="w-7 h-7 rounded-lg bg-slate-800 text-slate-300 text-xs font-black disabled:opacity-30">↓</button>
+
+                            </div>
+
+                            <input type="text" value="${escapeHtmlAttr(item.text)}"
+
+                                onchange="updateChecklistItemText('ACTIVE', '${item.id}', this.value)"
+
+                                class="flex-1 min-w-0 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white font-bold focus:outline-none focus:border-amber-400">
+
+                            <button onclick="deleteChecklistItem('ACTIVE', '${item.id}')" class="tactile w-9 h-9 rounded-xl bg-rose-500/20 hover:bg-rose-500/35 border border-rose-500/40 text-rose-300 font-black text-xs shrink-0">🗑️</button>
+
+                        </div>
+
+                    `).join('');
+
+                } else {
+
+                    document.getElementById('checklist-items-wrap').innerHTML = list.map(item => `
+
+                        <button onclick="toggleChecklistItem('${item.id}')" class="tactile w-full min-h-[60px] text-left rounded-2xl px-4 py-3 border-2 flex items-center justify-between gap-3 shadow ${item.done ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-100' : 'bg-slate-900/95 border-slate-700 text-white'}">
+
+                            <span class="text-sm font-extrabold leading-snug break-words ${item.done ? 'line-through opacity-75' : ''}">${item.text}</span>
+
+                            <span class="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-black shrink-0 ${item.done ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 border-2 border-slate-600 text-slate-500'}">${item.done ? '✓' : ''}</span>
+
+                        </button>
+
+                    `).join('');
+
+                }
 
                 const stampEl = document.getElementById('bar-ready-stamp');
                 if (barReadyTimestamps[activeLocId]) {
@@ -4292,59 +4617,182 @@ Prusaks Atentāts Tomātu Čili Gose 0.5L 3.6% [176];🍺 Alus & Roll-bārs;supp
         // =========================================================================
         // 6. POSMA KATALOGA PAPILDINĀŠANA: CSV IMPORTS + r_keeper IMPORTS + JAUNA PRECE
         // =========================================================================
+        const DEFAULT_PRODUCT_CATEGORIES = [
+
+            '🍺 Alus & Roll-bārs',
+
+            '🥃 Stiprais alko',
+
+            '🍷 Vīni',
+
+            '🍹 Kokteiļu bāzes & Sīrupi',
+
+            '🥤 Softi & B/A',
+
+            '☕ Kafija & Tēja',
+
+            '🍋 Bāra svaigie produkti',
+
+            '🥨 Uzkodas',
+
+            '🧀 Virtuve & Uzkodas',
+
+            '🧴 PET Tara & Saimniecība'
+
+        ];
+
+
+
+        function getAvailableProductCategories() {
+
+            const set = new Set(DEFAULT_PRODUCT_CATEGORIES);
+
+            products.forEach(p => {
+
+                if (p && p.category) set.add(p.category.trim());
+
+            });
+
+            return Array.from(set);
+
+        }
+
+
+
+        function handleNewProdCatChange(val) {
+
+            const customInput = document.getElementById('new-prod-cat-custom');
+
+            if (!customInput) return;
+
+            if (val === '__CUSTOM__') {
+
+                customInput.classList.remove('hidden');
+
+                customInput.focus();
+
+            } else {
+
+                customInput.classList.add('hidden');
+
+            }
+
+        }
+
+
+
+        function handleNewProdBuyTypeChange(val) {
+
+            const supInput = document.getElementById('new-prod-sup');
+
+            if (!supInput) return;
+
+            if (val === 'shop') {
+
+                supInput.value = '🏪 Gemoss';
+
+                supInput.placeholder = 'Izvēlies vai ieraksti veikalu';
+
+            } else {
+
+                supInput.value = 'Amber Distribution';
+
+                supInput.placeholder = 'Izvēlies vai ieraksti piegādātāju';
+
+            }
+
+        }
+
+
+
         function addNewCatalogProductFromUI() {
+
             const name = (document.getElementById('new-prod-name')?.value || '').trim();
-            const category = (document.getElementById('new-prod-cat')?.value || '🥤 Softi').trim();
+
+            const catSelectVal = document.getElementById('new-prod-cat')?.value || '🥤 Softi & B/A';
+
+            const customCatVal = (document.getElementById('new-prod-cat-custom')?.value || '').trim();
+
+            const category = catSelectVal === '__CUSTOM__' ? (customCatVal || '🥤 Softi & B/A') : catSelectVal;
+
             const buyType = document.getElementById('new-prod-buytype')?.value || 'supplier';
-            const supOrStore = (document.getElementById('new-prod-sup')?.value || 'Coca-Cola HBC').trim();
+
+            const supOrStore = (document.getElementById('new-prod-sup')?.value || (buyType === 'shop' ? '🏪 Gemoss' : 'Amber Distribution')).trim();
+
             const whMove = (document.getElementById('new-prod-whqty')?.value || '2 kastes').trim();
+
             const barMove = (document.getElementById('new-prod-barqty')?.value || '1 kaste').trim();
 
+
+
             if (!name) {
+
                 showToast('Ieraksti jaunā produkta nosaukumu!', '⚠️');
+
                 return;
+
             }
+
+            if (catSelectVal === '__CUSTOM__' && !customCatVal) {
+
+                showToast('Ieraksti savas jaunās kategorijas nosaukumu!', '⚠️');
+
+                return;
+
+            }
+
+
 
             const newId = Math.max(...products.map(p => p.id), 200) + 1;
-            const newProd = {
-                id: newId,
-                name,
-                category,
-                isDaily: false,
-                freshTag: '',
-                rkYesterday: 0,
-                rkSinceCheck: 0,
-                checkedToday: false,
-                locs: ['am_bar', 'am_wh', 'gust_bar', 'gust_barn', 'gust_wine'],
-                moveQty: { bar: barMove, wine: barMove, wh: whMove },
-                thresholds: {
-                    wh:   { ok: '3+ vien.', low: '1–2 vien.', out: '0 vien.' },
-                    bar:  { ok: '2+ vien.', low: '1 vien.',   out: 'Tukšs' },
-                    wine: { ok: '2+ vien.', low: '1 vien.',   out: 'Tukšs' }
-                },
-                buyType,
-                storeName: buyType === 'shop' ? supOrStore : '',
-                supplier: supOrStore,
-                status: { am_bar: 'ok', am_wh: 'ok', gust_bar: 'ok', gust_barn: 'ok', gust_wine: 'ok', gust_venue: 'ok' }
-            };
 
-            if (buyType === 'supplier' && !suppliers[supOrStore]) {
-                suppliers[supOrStore] = {
-                    owner: 'kalvis',
-                    phone: '+371 20000000',
-                    email: '',
-                    greeting: `Sveiki! Pasūtījums no mums:`,
-                    closing: 'Paldies!',
-                    includeAddress: false,
-                    orderState: 'idle',
-                    palletSplits: []
+            let newProd;
+
+            if (typeof buildProductFromCsvParts === 'function') {
+
+                newProd = buildProductFromCsvParts(newId, name, category, buyType, supOrStore, whMove, barMove);
+
+            } else {
+
+                newProd = {
+
+                    id: newId, name, category, isDaily: false, freshTag: '', rkYesterday: 0, rkSinceCheck: 0, checkedToday: false,
+
+                    locs: ['am_bar', 'am_wh', 'gust_bar', 'gust_barn', 'gust_wine'],
+
+                    moveQty: { bar: barMove, wine: barMove, wh: whMove },
+
+                    thresholds: { wh: { ok: '3+ vien.', low: '1–2 vien.', out: '0' }, bar: { ok: '2+ vien.', low: '1 vien.', out: 'Tukšs' }, wine: { ok: '2+ vien.', low: '1 vien.', out: 'Tukšs' } },
+
+                    buyType, storeName: buyType === 'shop' ? supOrStore : '', supplier: supOrStore,
+
+                    status: { am_bar: 'ok', am_wh: 'ok', gust_bar: 'ok', gust_barn: 'ok', gust_wine: 'ok', gust_venue: 'ok' }
+
                 };
+
             }
 
+
+
             products.unshift(newProd);
-            logEvent(`📦 Katalogam pievienots produkts: ${name} (${supOrStore})`);
+
+            if (typeof ensureAllProductSuppliersRegistered === 'function') {
+
+                ensureAllProductSuppliersRegistered();
+
+            } else if (buyType === 'supplier' && !suppliers[supOrStore]) {
+
+                suppliers[supOrStore] = { owner: 'kalvis', phone: '', email: '', greeting: 'Sveiki! Pasūtījums no SIA MŪPA:', closing: 'Paldies!', includeAddress: false, orderState: 'idle', palletSplits: [] };
+
+            }
+
+
+
+            triggerUniversalSave(`📦 Katalogam pievienots: ${name} (${category})`);
+
             showToast(`Pievienots katalogam: ${name}!`, '📦');
+
             renderAll();
+
         }
 
         function importProductsCsvText() {
@@ -4524,22 +4972,65 @@ Prusaks Atentāts Tomātu Čili Gose 0.5L 3.6% [176];🍺 Alus & Roll-bārs;supp
 
                         <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 space-y-2">
                             <div class="text-xs font-black text-amber-300">+ Pievienot 1 jaunu produktu katalogam</div>
-                            <input id="new-prod-name" type="text" placeholder="Produkta nosaukums (piem., Aperol 1L)" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-semibold">
-                            <div class="grid grid-cols-2 gap-2">
-                                <input id="new-prod-cat" type="text" value="🍹 Kokteiļu bāzes & Sīrupi" placeholder="Kategorija" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white">
-                                <select id="new-prod-buytype" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white font-bold">
-                                    <option value="supplier">🚚 Piegādātājs</option>
-                                    <option value="shop">🏪 Veikals</option>
-                                </select>
-                            </div>
-                            <div class="grid grid-cols-3 gap-2">
-                                <input id="new-prod-sup" type="text" value="Amber Distribution" placeholder="Piegādātājs / Veikals" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white">
-                                <input id="new-prod-whqty" type="text" value="1 kaste (6 pud.)" placeholder="Nol. solis" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white">
-                                <input id="new-prod-barqty" type="text" value="2 pudeles" placeholder="Bāra solis" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white">
-                            </div>
-                            <button onclick="addNewCatalogProductFromUI()" class="tactile w-full py-2.5 rounded-xl bg-amber-500 text-slate-950 font-black text-xs">
-                                ➕ Saglabāt produktu katalogā
-                            </button>
+                            <input id="new-prod-name" type="text" placeholder="Produkta nosaukums (piem., Aperol 1L [7014])" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-semibold focus:outline-none focus:border-amber-400">
+
+                        <div class="grid grid-cols-2 gap-2">
+
+                            <select id="new-prod-cat" onchange="handleNewProdCatChange(this.value)" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white font-bold focus:outline-none focus:border-amber-400">
+
+                                ${getAvailableProductCategories().map(cat => `
+
+                                    <option value="${escapeHtmlAttr(cat)}" ${cat === '🍹 Kokteiļu bāzes & Sīrupi' ? 'selected' : ''}>${cat}</option>
+
+                                `).join('')}
+
+                                <option value="__CUSTOM__">➕ Cita kategorija...</option>
+
+                            </select>
+
+                            <select id="new-prod-buytype" onchange="handleNewProdBuyTypeChange(this.value)" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white font-bold focus:outline-none focus:border-amber-400">
+
+                                <option value="supplier">🚚 Piegādātājs</option>
+
+                                <option value="shop">🏪 Veikals</option>
+
+                            </select>
+
+                        </div>
+
+                        <input id="new-prod-cat-custom" type="text" placeholder="Ieraksti jauno kategoriju (piem., 🧊 Ledus & Dekori)" class="hidden w-full bg-slate-950 border border-amber-400/60 rounded-lg px-3 py-2 text-xs text-amber-200 font-semibold focus:outline-none">
+
+                        <div class="grid grid-cols-3 gap-2">
+
+                            <input id="new-prod-sup" list="existing-sup-store-list" type="text" value="Amber Distribution" placeholder="Piegādātājs / Veikals" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white font-semibold focus:outline-none focus:border-amber-400">
+
+                            <datalist id="existing-sup-store-list">
+
+                                <option value="🏪 Gemoss"></option>
+
+                                <option value="🏪 Promo C&C"></option>
+
+                                <option value="🛠️ Depo"></option>
+
+                                <option value="🍋 Vietējais veikals"></option>
+
+                                ${Object.keys(suppliers).filter(s => !s.includes('Mēneša pasūtījums')).map(s => `<option value="${escapeHtmlAttr(s)}"></option>`).join('')}
+
+                            </datalist>
+
+                            <input id="new-prod-whqty" type="text" value="1 kaste (6 pud.)" placeholder="Nol. solis" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white">
+
+                            <input id="new-prod-barqty" type="text" value="2 pudeles" placeholder="Bāra solis" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white">
+
+                        </div>
+
+                        <button onclick="addNewCatalogProductFromUI()" class="tactile w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow">
+
+                            ➕ Saglabāt produktu katalogā
+
+                        </button>
+
+-
                         </div>
 
                         <details class="bg-slate-900 border border-slate-800 rounded-xl p-3">
@@ -4658,26 +5149,133 @@ Fever-Tree;19</textarea>
             }
 
             if (vadibaSubtab === 'TASKS') {
+
+                const activeChkList = getChecklistArrayByTarget(vadibaChecklistTarget);
+
                 container.innerHTML = `
-                    <div class="bg-[#1e293b] border border-slate-700 rounded-2xl p-4 space-y-3">
-                        <div class="flex items-center justify-between">
-                            <h3 class="text-sm font-black text-white">🔧 Periodisko darbu saraksts</h3>
-                            <button onclick="openQuickTaskModal()" class="tactile px-3 py-1.5 rounded-xl bg-indigo-500 text-slate-950 font-black text-xs">+ Jauns darbs</button>
+
+                    <div class="bg-[#1e293b] border-2 border-emerald-500/40 rounded-2xl p-4 space-y-3.5 shadow-lg">
+
+                        <div>
+
+                            <span class="text-[10px] font-black uppercase tracking-wider text-emerald-300">Maiņas & Pasākumu Čeklistes</span>
+
+                            <h3 class="text-sm font-black text-white">✅ Čeklistes punktu redaktors</h3>
+
+                            <p class="text-[11px] text-slate-400 mt-0.5">Izvēlies telpu vai Venue pasākuma šablonu, lai pievienotu, pārkārtotu vai izdzēstu čeklistes punktus:</p>
+
                         </div>
-                        <div class="space-y-2">
-                            ${periodicTasks.map(t => `
-                                <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between gap-2">
-                                    <div class="min-w-0">
-                                        <div class="text-xs font-black text-white break-words">${t.title}</div>
-                                        <div class="text-[10px] text-slate-400">${getLoc(t.locId).shortTitle} • ${t.freq} • ${t.owner === 'kalvis' ? '👤 Kalvis' : '👑 Vadītāji'}</div>
-                                    </div>
-                                    <button onclick="deletePeriodicTask('${t.id}')" class="px-2.5 py-1.5 rounded-lg bg-rose-500/20 text-rose-300 text-xs font-bold shrink-0">Dzēst</button>
-                                </div>
+
+
+
+                        <select onchange="setVadibaChecklistTarget(this.value)" class="w-full bg-slate-950 border-2 border-emerald-500/50 rounded-xl px-3 py-2.5 text-xs text-white font-black focus:outline-none focus:border-emerald-400">
+
+                            ${CHECKLIST_TARGETS.map(t => `
+
+                                <option value="${t.key}" ${vadibaChecklistTarget === t.key ? 'selected' : ''}>${t.label} (${getChecklistArrayByTarget(t.key).length})</option>
+
                             `).join('')}
+
+                        </select>
+
+
+
+                        <div class="flex items-center gap-2">
+
+                            <input id="vadiba-chk-new-input" type="text" placeholder="Jauns punkts (piem., Ieslēgt terases sildītājus)"
+
+                                onkeydown="if(event.key==='Enter') addChecklistItemFromInput('${vadibaChecklistTarget}', 'vadiba-chk-new-input')"
+
+                                class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white font-semibold focus:outline-none focus:border-emerald-400">
+
+                            <button onclick="addChecklistItemFromInput('${vadibaChecklistTarget}', 'vadiba-chk-new-input')" class="tactile px-3.5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shrink-0 shadow">
+
+                                + Pievienot
+
+                            </button>
+
                         </div>
+
+
+
+                        <div class="space-y-2">
+
+                            ${activeChkList.length === 0
+
+                                ? `<div class="bg-slate-900 rounded-xl p-3 text-center text-xs text-slate-400 font-semibold">Šajā čeklistē vēl nav punktu.</div>`
+
+                                : activeChkList.map((item, idx) => `
+
+                                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-2.5 flex items-center gap-2">
+
+                                        <div class="flex flex-col gap-1 shrink-0">
+
+                                            <button onclick="moveChecklistItem('${vadibaChecklistTarget}', '${item.id}', -1)" ${idx === 0 ? 'disabled' : ''} class="w-6 h-6 rounded bg-slate-800 text-slate-300 text-[11px] font-black disabled:opacity-30">↑</button>
+
+                                            <button onclick="moveChecklistItem('${vadibaChecklistTarget}', '${item.id}', 1)" ${idx === activeChkList.length - 1 ? 'disabled' : ''} class="w-6 h-6 rounded bg-slate-800 text-slate-300 text-[11px] font-black disabled:opacity-30">↓</button>
+
+                                        </div>
+
+                                        <input type="text" value="${escapeHtmlAttr(item.text)}"
+
+                                            onchange="updateChecklistItemText('${vadibaChecklistTarget}', '${item.id}', this.value)"
+
+                                            class="flex-1 min-w-0 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white font-semibold focus:outline-none focus:border-emerald-400">
+
+                                        <button onclick="deleteChecklistItem('${vadibaChecklistTarget}', '${item.id}')" class="tactile px-2.5 py-2 rounded-lg bg-rose-500/20 hover:bg-rose-500/35 text-rose-300 text-xs font-bold shrink-0">
+
+                                            🗑️
+
+                                        </button>
+
+                                    </div>
+
+                                `).join('')
+
+                            }
+
+                        </div>
+
                     </div>
-                `;
+
+
+
+                    <div class="bg-[#1e293b] border border-slate-700 rounded-2xl p-4 space-y-3">
+
+                        <div class="flex justify-between items-center">
+
+                            <h3 class="text-sm font-black text-white">🔧 Periodiskie darbi</h3>
+
+                            <button onclick="openQuickTaskModal()" class="tactile px-3 py-1.5 rounded-xl bg-indigo-500 text-slate-950 font-black text-xs">+ Jauns darbs</button>
+
+                        </div>
+
+                        <div class="space-y-2">
+
+                            ${periodicTasks.map(t => `
+
+                                <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex justify-between items-center gap-2">
+
+                                    <div class="min-w-0">
+
+                                        <div class="text-xs font-black text-white break-words">${t.title}</div>
+
+                                        <div class="text-[10px] text-slate-400">${getLoc(t.locId).shortTitle} • ${t.freq}</div>
+
+                                    </div>
+
+                                    <button onclick="deletePeriodicTask('${t.id}')" class="px-2.5 py-1.5 rounded-lg bg-rose-500/20 text-rose-300 text-xs font-bold shrink-0">Dzēst</button>
+
+                                </div>
+
+                            `).join('')}
+
+                        </div>
+
+                    </div>`;
+
                 return;
+
             }
 
             container.innerHTML = Object.entries(suppliers).map(([sName, sup]) => `

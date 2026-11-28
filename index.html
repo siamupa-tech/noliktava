@@ -559,6 +559,116 @@
         <!-- ========================================================= -->
         <!-- APAKŠĒJĀ NAVIGĀCIJAS JOSLA (5 SADAĻAS)                    -->
         <!-- ========================================================= -->
+        <!-- MODĀLAIS LOGS 3: PILNAIS PRECES UN LĪMEŅU REDAKTORS -->
+        <div id="prod-edit-modal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-3">
+            <div class="bg-[#1e293b] border-2 border-amber-400/60 rounded-2xl max-w-md w-full p-4 space-y-3 shadow-2xl max-h-[92vh] overflow-y-auto">
+                <div class="flex items-center justify-between border-b border-slate-700 pb-2.5">
+                    <div>
+                        <span class="text-[10px] font-black uppercase tracking-wider text-amber-300">Kataloga Preces Iestatījumi</span>
+                        <h3 class="text-sm font-black text-white">✏️ Labot preci, līmeņus & kategoriju</h3>
+                    </div>
+                    <button onclick="closeProdEditModal()" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-300 hover:text-white font-bold text-sm">✕</button>
+                </div>
+
+                <input type="hidden" id="edit-prod-id">
+
+                <div class="space-y-1">
+                    <label class="text-[11px] font-bold text-slate-300">Preces nosaukums (un r_keeper kods):</label>
+                    <input id="edit-prod-name" type="text" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-bold focus:outline-none focus:border-amber-400">
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="space-y-1">
+                        <label class="text-[11px] font-bold text-slate-300">Kategorija (vai raksti jaunu):</label>
+                        <input id="edit-prod-cat" list="edit-cat-datalist" type="text" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-amber-200 font-bold focus:outline-none focus:border-amber-400">
+                        <datalist id="edit-cat-datalist"></datalist>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[11px] font-bold text-slate-300">Iegādes veids:</label>
+                        <select id="edit-prod-buytype" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white font-bold">
+                            <option value="supplier">🚚 Piegādātājs</option>
+                            <option value="shop">🏪 Veikals</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[11px] font-bold text-slate-300">Piegādātājs vai Veikals (piem., 🏪 Gemoss):</label>
+                    <input id="edit-prod-sup" type="text" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-semibold focus:outline-none focus:border-amber-400">
+                </div>
+
+                <!-- KUSTĪBAS UN PASŪTĪŠANAS SOĻI -->
+                <div class="bg-slate-900/90 border border-slate-700 rounded-xl p-2.5 space-y-2">
+                    <div class="text-[11px] font-black text-sky-300">📦 Pasūtīšanas un pārvietošanas daudzumi:</div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div>
+                            <label class="text-[10px] text-slate-400 font-bold block">Noliktavai (pērk)</label>
+                            <input id="edit-prod-wh-move" type="text" placeholder="2 kastes" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white font-bold">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-slate-400 font-bold block">Uz Bāru (nes)</label>
+                            <input id="edit-prod-bar-move" type="text" placeholder="1 kaste" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white font-bold">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-slate-400 font-bold block">Uz 5. Wine (nes)</label>
+                            <input id="edit-prod-wine-move" type="text" placeholder="6 pud." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white font-bold">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SKAITA SLIEKŠŅI NOLIKTAVAI -->
+                <div class="bg-slate-900/90 border border-amber-500/30 rounded-xl p-2.5 space-y-2">
+                    <div class="text-[11px] font-black text-amber-300">🏚️ Noliktavas skaita līmeņi (2. A.M nol. & 4. Šķūnis):</div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div>
+                            <label class="text-[10px] text-emerald-300 font-black block">🟢 OK (Pilns)</label>
+                            <input id="edit-th-wh-ok" type="text" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white font-semibold">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-amber-300 font-black block">🟡 MAZ</label>
+                            <input id="edit-th-wh-low" type="text" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white font-semibold">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-rose-300 font-black block">🔴 NAV</label>
+                            <input id="edit-th-wh-out" type="text" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white font-semibold">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SKAITA SLIEKŠŅI BĀRAM -->
+                <div class="bg-slate-900/90 border border-emerald-500/30 rounded-xl p-2.5 space-y-2">
+                    <div class="text-[11px] font-black text-emerald-300">🍸 Bāra skaita līmeņi (1. A.M, 3. Gust & 5. Wine):</div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div>
+                            <label class="text-[10px] text-emerald-300 font-black block">🟢 OK (Pilns)</label>
+                            <input id="edit-th-bar-ok" type="text" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white font-semibold">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-amber-300 font-black block">🟡 MAZ</label>
+                            <input id="edit-th-bar-low" type="text" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white font-semibold">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-rose-300 font-black block">🔴 NAV</label>
+                            <input id="edit-th-bar-out" type="text" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white font-semibold">
+                        </div>
+                    </div>
+                </div>
+
+                <label class="flex items-center gap-2 text-xs text-slate-200 font-bold pt-1 cursor-pointer">
+                    <input id="edit-prod-daily" type="checkbox" class="w-4 h-4 accent-amber-400">
+                    <span>🔥 Rādīt šo preci arī katra rīta "Šodien" ātrajā izlasē</span>
+                </label>
+
+                <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-700">
+                    <button onclick="deleteCatalogProductFromModal()" class="tactile py-3 px-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/35 border border-rose-500/50 text-rose-300 font-black text-xs">
+                        🗑️ Dzēst
+                    </button>
+                    <button onclick="saveProdEditModal()" class="col-span-2 tactile py-3 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-lg">
+                        💾 Saglabāt izmaiņas
+                    </button>
+                </div>
+            </div>
+        </div>
         <nav class="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-lg z-40 bg-[#0f172a]/95 backdrop-blur-md border-t border-slate-800 grid grid-cols-5 px-1.5 py-2 shadow-2xl">
             <button id="nav-sodien" onclick="switchTab('sodien')" class="flex flex-col items-center justify-center py-1.5 rounded-xl text-amber-400 font-extrabold bg-slate-800/90 relative transition">
                 <span class="text-lg leading-none">📋</span>
@@ -3310,7 +3420,115 @@ function triggerUniversalSave(msg) {
             smartScopeAllLocs = !smartScopeAllLocs;
             renderApsekosana();
         }
+        function openProdEditModal(prodId) {
+            const p = products.find(x => x.id === prodId);
+            if (!p) return;
 
+            document.getElementById('edit-prod-id').value = p.id;
+            document.getElementById('edit-prod-name').value = p.name || '';
+            document.getElementById('edit-prod-cat').value = p.category || '';
+            document.getElementById('edit-prod-buytype').value = p.buyType || 'supplier';
+            document.getElementById('edit-prod-sup').value = (p.buyType === 'shop' ? (p.storeName || p.supplier) : p.supplier) || '';
+
+            document.getElementById('edit-prod-wh-move').value = p.moveQty?.wh || '2 kastes';
+            document.getElementById('edit-prod-bar-move').value = p.moveQty?.bar || '1 kaste';
+            document.getElementById('edit-prod-wine-move').value = p.moveQty?.wine || p.moveQty?.bar || '1 kaste';
+
+            document.getElementById('edit-th-wh-ok').value = p.thresholds?.wh?.ok || '3+ vien.';
+            document.getElementById('edit-th-wh-low').value = p.thresholds?.wh?.low || '1–2 vien.';
+            document.getElementById('edit-th-wh-out').value = p.thresholds?.wh?.out || '0';
+
+            document.getElementById('edit-th-bar-ok').value = p.thresholds?.bar?.ok || '2+ vien.';
+            document.getElementById('edit-th-bar-low').value = p.thresholds?.bar?.low || '1 vien.';
+            document.getElementById('edit-th-bar-out').value = p.thresholds?.bar?.out || 'Tukšs';
+
+            document.getElementById('edit-prod-daily').checked = Boolean(p.isDaily);
+
+            const dl = document.getElementById('edit-cat-datalist');
+            if (dl) {
+                const cats = [...new Set(products.map(x => x.category).filter(Boolean))];
+                dl.innerHTML = cats.map(c => `<option value="${c.replace(/"/g, '&quot;')}"></option>`).join('');
+            }
+
+            document.getElementById('prod-edit-modal').classList.remove('hidden');
+        }
+
+        function closeProdEditModal() {
+            document.getElementById('prod-edit-modal').classList.add('hidden');
+        }
+
+        function saveProdEditModal() {
+            const prodId = Number(document.getElementById('edit-prod-id').value);
+            const p = products.find(x => x.id === prodId);
+            if (!p) return;
+
+            const newName = document.getElementById('edit-prod-name').value.trim();
+            if (!newName) {
+                showToast('Nosaukums nedrīkst būt tukšs!', '⚠️');
+                return;
+            }
+
+            p.name = newName;
+            p.category = document.getElementById('edit-prod-cat').value.trim() || p.category;
+            p.buyType = document.getElementById('edit-prod-buytype').value;
+            const supVal = document.getElementById('edit-prod-sup').value.trim() || 'Amber Distribution';
+            p.supplier = supVal;
+            p.storeName = p.buyType === 'shop' ? supVal : '';
+
+            if (p.buyType === 'supplier' && !suppliers[supVal]) {
+                suppliers[supVal] = {
+                    owner: 'kalvis', phone: '', email: '',
+                    greeting: 'Sveiki! Pasūtījums no SIA MŪPA:', closing: 'Paldies!',
+                    includeAddress: false, orderState: 'idle', palletSplits: []
+                };
+            }
+
+            p.moveQty = {
+                wh: document.getElementById('edit-prod-wh-move').value.trim() || '2 kastes',
+                bar: document.getElementById('edit-prod-bar-move').value.trim() || '1 kaste',
+                wine: document.getElementById('edit-prod-wine-move').value.trim() || '1 kaste'
+            };
+
+            const barOk = document.getElementById('edit-th-bar-ok').value.trim() || '2+ vien.';
+            const barLow = document.getElementById('edit-th-bar-low').value.trim() || '1 vien.';
+            const barOut = document.getElementById('edit-th-bar-out').value.trim() || 'Tukšs';
+
+            p.thresholds = {
+                wh: {
+                    ok: document.getElementById('edit-th-wh-ok').value.trim() || '3+ vien.',
+                    low: document.getElementById('edit-th-wh-low').value.trim() || '1–2 vien.',
+                    out: document.getElementById('edit-th-wh-out').value.trim() || '0'
+                },
+                bar: { ok: barOk, low: barLow, out: barOut },
+                wine: { ok: barOk, low: barLow, out: barOut }
+            };
+
+            p.isDaily = document.getElementById('edit-prod-daily').checked;
+
+            closeProdEditModal();
+            const msg = `✏️ Atjaunoti iestatījumi precei: ${p.name}`;
+            if (typeof saveState === 'function') saveState(msg);
+            else if (typeof triggerUniversalSave === 'function') triggerUniversalSave(msg);
+            showToast('Preces līmeņi un dati saglabāti!', '💾');
+            renderAll();
+        }
+
+        function deleteCatalogProductFromModal() {
+            const prodId = Number(document.getElementById('edit-prod-id').value);
+            const p = products.find(x => x.id === prodId);
+            if (!p) return;
+            if (!confirm(`Vai tiešām pilnībā izdzēst "${p.name}" no kataloga?`)) return;
+
+            products = products.filter(x => x.id !== prodId);
+            vanItems = vanItems.filter(v => v.prodId !== prodId);
+            closeProdEditModal();
+
+            const msg = `🗑️ No kataloga izdzēsta prece: ${p.name}`;
+            if (typeof saveState === 'function') saveState(msg);
+            else if (typeof triggerUniversalSave === 'function') triggerUniversalSave(msg);
+            showToast('Prece izdzēsta no kataloga!', '🗑️');
+            renderAll();
+        }
         function setProductStatus(prodId, locId, newStatus) {
             const p = products.find(x => x.id === prodId);
             if (!p) return;
@@ -3456,9 +3674,11 @@ function triggerUniversalSave(msg) {
                             <h4 class="text-sm font-black text-white leading-snug break-words">${p.name}</h4>
                         </div>
                         <div class="flex items-center gap-1.5 shrink-0">
-                            ${assortmentEditMode ? `<button onclick="toggleProductInLoc(${p.id}, '${locId}', false)" class="tactile px-2.5 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/35 border border-rose-400/50 text-rose-200 text-[10px] font-black">🙈 Nav šeit</button>` : ''}
+                            <button onclick="openProdEditModal(${p.id})" title="Labot līmeņus un kategoriju" class="tactile px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-amber-300 text-[11px] font-black">✏️</button>
+                            ${typeof assortmentEditMode !== 'undefined' && assortmentEditMode ? `<button onclick="toggleProductInLoc(${p.id}, '${locId}', false)" class="tactile px-2.5 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/35 border border-rose-400/50 text-rose-200 text-[10px] font-black">🙈 Nav šeit</button>` : ''}
                             ${p.checkedToday ? `<span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300">✓ Šodien</span>` : ''}
                         </div>
+
                     </div>
 
                     ${rkAlertHtml}
@@ -4839,7 +5059,7 @@ function triggerUniversalSave(msg) {
                 AM_ONLY: ['am_bar', 'am_wh']
             };
             newProd.locs = presetMap[locPreset] || presetMap.ALL;
-            
+
             products.unshift(newProd);
             if (typeof ensureAllProductSuppliersRegistered === 'function') {
                 ensureAllProductSuppliersRegistered();

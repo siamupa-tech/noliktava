@@ -374,10 +374,22 @@
                 <div id="audit-mode-banner"></div>
                 <div id="audit-smart-filter-bar"></div>
 
-                <div id="audit-search-wrap" class="relative">
-                    <input id="audit-search-input" type="text" oninput="renderApsekosana()" placeholder="🔎 Meklēt produktu šajā telpā..." class="w-full bg-slate-900/95 border border-slate-700 rounded-2xl px-4 py-3 text-xs text-white font-semibold focus:outline-none focus:border-amber-400">
+                <div id="audit-search-wrap" class="space-y-2">
+                    <div class="flex items-center gap-2">
+                        <input id="audit-search-input" type="text" oninput="renderApsekosana()" placeholder="🔎 Meklēt produktu šajā telpā..." class="flex-1 bg-slate-900/95 border border-slate-700 rounded-2xl px-4 py-3 text-xs text-white font-semibold focus:outline-none focus:border-amber-400">
+                        <button id="assortment-mode-btn" onclick="toggleAssortmentEditMode()" class="tactile px-3.5 py-3 rounded-2xl bg-slate-900 border border-slate-700 text-amber-300 font-black text-xs shrink-0 shadow">
+                            🛠️ Sortiments
+                        </button>
+                    </div>
+                    <div id="assortment-helper-box" class="hidden bg-amber-950/60 border-2 border-amber-400/70 rounded-2xl p-3 space-y-2.5 shadow-lg">
+                        <div class="text-xs font-extrabold text-amber-100 leading-snug">
+                            🛠️ <strong>Sortimenta rediģēšana:</strong> Izslēdz veselas kategorijas vai atsevišķas preces, kuras šajā telpā netirgo / neglabā!
+                        </div>
+                        <button onclick="syncWarehousesWithBars()" class="tactile w-full py-2.5 px-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow">
+                            🔗 Sasinhronizēt noliktavas ar bāriem (A.M → A.M nol. | Gust+Wine → Šķūnis)
+                        </button>
+                    </div>
                 </div>
-
                 <div id="audit-content-container" class="space-y-3"></div>
             </section>
 
@@ -3212,6 +3224,78 @@ function triggerUniversalSave(msg) {
         // =========================================================================
         // 2. EKRĀNS: 🔍 APSEKOŠANA
         // =========================================================================
+        let assortmentEditMode = false;
+
+        function toggleAssortmentEditMode() {
+            assortmentEditMode = !assortmentEditMode;
+            if (assortmentEditMode && auditMode !== 'TUESDAY') {
+                auditMode = 'TUESDAY';
+            }
+            renderApsekosana();
+        }
+
+        function toggleProductInLoc(prodId, locId, shouldInclude) {
+            const p = products.find(x => x.id === prodId);
+            if (!p) return;
+            if (!Array.isArray(p.locs)) p.locs = ['am_bar', 'am_wh', 'gust_bar', 'gust_barn', 'gust_wine'];
+
+            if (shouldInclude) {
+                if (!p.locs.includes(locId)) p.locs.push(locId);
+                if ( !p.status[locId] ) p.status[locId] = 'ok';
+            } else {
+                p.locs = p.locs.filter(id => id !== locId);
+                p.status[locId] = 'ok'; // Notīrām viltus iztrūkumu, ja prece šeit nemaz nav
+            }
+
+            const msg = `${shouldInclude ? '➕ Ieslēgts' : '🙈 Paslēpts'} (${getLoc(locId).shortTitle}): ${p.name}`;
+            if (typeof saveState === 'function') saveState(msg);
+            showToast(shouldInclude ? 'Prece ieslēgta šajā telpā!' : 'Prece noņemta no šīs telpas!', shouldInclude ? '➕' : '🙈');
+            renderAll();
+        }
+
+        function toggleCategoryInLoc(categoryName, locId, shouldInclude) {
+            let count = 0;
+            products.forEach(p => {
+                if (p.category === categoryName) {
+                    if (!Array.isArray(p.locs)) p.locs = ['am_bar', 'am_wh', 'gust_bar', 'gust_barn', 'gust_wine'];
+                    if (shouldInclude && !p.locs.includes(locId)) {
+                        p.locs.push(locId);
+                        p.status[locId] = 'ok';
+                        count++;
+                    } else if (!shouldInclude && p.locs.includes(locId)) {
+                        p.locs = p.locs.filter(id => id !== locId);
+                        p.status[locId] = 'ok';
+                        count++;
+                    }
+                }
+            });
+            const msg = `${shouldInclude ? '➕ Ieslēgta' : '🚫 Izslēgta'} grupa "${categoryName}" telpā ${getLoc(locId).shortTitle} (${count} preces)`;
+            if (typeof saveState === 'function') saveState(msg);
+            showToast(`${shouldInclude ? 'Pievienotas' : 'Paslēptas'} ${count} preces!`, shouldInclude ? '➕' : '🚫');
+            renderAll();
+        }
+
+        function syncWarehousesWithBars() {
+            products.forEach(p => {
+                if (!Array.isArray(p.locs)) return;
+                // 2. A.M noliktavā vajag to, kas ir 1. A.M bārā
+                const inAmBar = p.locs.includes('am_bar');
+                p.locs = p.locs.filter(id => id !== 'am_wh');
+                if (inAmBar) p.locs.push('am_wh');
+                else p.status.am_wh = 'ok';
+
+                // 4. Gust.šķūnī vajag to, kas ir 3. Gust.bārā VAI 5. Gust.Wine
+                const inGustSide = p.locs.includes('gust_bar') || p.locs.includes('gust_wine');
+                p.locs = p.locs.filter(id => id !== 'gust_barn');
+                if (inGustSide) p.locs.push('gust_barn');
+                else p.status.gust_barn = 'ok';
+            });
+
+            if (typeof saveState === 'function') saveState('🔗 Noliktavu sortiments sasinhronizēts ar A.M un Gust. bāriem!');
+            showToast('Abas noliktavas sasinhronizētas ar saviem bāriem!', '🔗');
+            renderAll();
+        }
+        
         function setAuditMode(mode) {
             auditMode = mode;
             renderApsekosana();
@@ -3371,7 +3455,10 @@ function triggerUniversalSave(msg) {
                             </div>
                             <h4 class="text-sm font-black text-white leading-snug break-words">${p.name}</h4>
                         </div>
-                        ${p.checkedToday ? `<span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 shrink-0">✓ Šodien</span>` : ''}
+                        <div class="flex items-center gap-1.5 shrink-0">
+                            ${assortmentEditMode ? `<button onclick="toggleProductInLoc(${p.id}, '${locId}', false)" class="tactile px-2.5 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/35 border border-rose-400/50 text-rose-200 text-[10px] font-black">🙈 Nav šeit</button>` : ''}
+                            ${p.checkedToday ? `<span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300">✓ Šodien</span>` : ''}
+                        </div>
                     </div>
 
                     ${rkAlertHtml}
@@ -3613,30 +3700,83 @@ function triggerUniversalSave(msg) {
                 </div>
             `;
 
-            const allHere = products.filter(p => isProdInLoc(p, activeLocId) && (!query || p.name.toLowerCase().includes(query)));
-            const categories = [...new Set(allHere.map(p => p.category))];
+            const modeBtn = document.getElementById('assortment-mode-btn');
+            const helperBox = document.getElementById('assortment-helper-box');
+            if (modeBtn) {
+                modeBtn.textContent = assortmentEditMode ? '✓ Gatavs' : '🛠️ Sortiments';
+                modeBtn.className = assortmentEditMode
+                    ? 'tactile px-3.5 py-3 rounded-2xl bg-amber-400 text-slate-950 font-black text-xs shrink-0 shadow-lg'
+                    : 'tactile px-3.5 py-3 rounded-2xl bg-slate-900 border border-slate-700 text-amber-300 font-black text-xs shrink-0 shadow';
+            }
+            if (helperBox) {
+                helperBox.classList.toggle('hidden', !assortmentEditMode);
+            }
 
-            contentEl.innerHTML = categories.map(cat => {
+            const allHere = products.filter(p => isProdInLoc(p, activeLocId) && (!query || p.name.toLowerCase().includes(query)));
+            const hiddenHere = products.filter(p => !isProdInLoc(p, activeLocId) && (!query || p.name.toLowerCase().includes(query)));
+            const categories = [...new Set(allHere.map(p => p.category))];
+            const hiddenCategories = [...new Set(hiddenHere.map(p => p.category))];
+
+            const activeGroupsHtml = categories.map(cat => {
                 const items = allHere.filter(p => p.category === cat);
+                const safeCat = cat.replace(/'/g, "\\'");
                 return `
                     <div class="bg-slate-900/75 border border-slate-800 rounded-2xl p-3 space-y-2.5">
-                        <div class="flex items-center justify-between px-1">
+                        <div class="flex items-center justify-between gap-2 px-1">
                             <h3 class="text-xs font-black uppercase tracking-wider text-amber-300">${cat} (${items.length})</h3>
+                            ${assortmentEditMode ? `
+                                <button onclick="toggleCategoryInLoc('${safeCat}', '${activeLocId}', false)" class="tactile px-2.5 py-1 rounded-lg bg-rose-500/20 border border-rose-500/50 text-rose-300 text-[10px] font-black shrink-0">
+                                    🚫 Izslēgt visu grupu šeit
+                                </button>
+                            ` : ''}
                         </div>
                         <div class="space-y-2.5">
                             ${items.map(p => renderProductAuditCard(p, activeLocId, evaluateSmartSignal(p, activeLocId), false)).join('')}
                         </div>
-                        <button onclick="markCategoryRestOk('${cat}')" class="tactile w-full py-2.5 px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 font-black text-xs">
-                            ✅ Viss pārējais šajā grupā ir 🟢
-                        </button>
+                        ${!assortmentEditMode ? `
+                            <button onclick="markCategoryRestOk('${safeCat}')" class="tactile w-full py-2.5 px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 font-black text-xs">
+                                ✅ Viss pārējais šajā grupā ir 🟢
+                            </button>
+                        ` : ''}
                     </div>
                 `;
-            }).join('') + `
+            }).join('');
+
+            const hiddenDrawerHtml = hiddenHere.length > 0 ? `
+                <details class="bg-slate-900/90 border border-dashed border-slate-700 rounded-2xl p-3.5" ${assortmentEditMode ? 'open' : ''}>
+                    <summary class="text-xs font-black text-slate-300 cursor-pointer">
+                        👁️ Šajā telpā izslēgtās preces (${hiddenHere.length}) — uzspied, lai pievienotu atpakaļ
+                    </summary>
+                    <div class="mt-3 space-y-2">
+                        <div class="flex flex-wrap gap-1.5 pb-2 border-b border-slate-800">
+                            ${hiddenCategories.map(hCat => `
+                                <button onclick="toggleCategoryInLoc('${hCat.replace(/'/g, "\\'")}', '${activeLocId}', true)" class="tactile px-2.5 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-[10px] font-black">
+                                    ➕ Ieslēgt visu: ${hCat}
+                                </button>
+                            `).join('')}
+                        </div>
+                        ${hiddenHere.map(hp => `
+                            <div class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 flex items-center justify-between gap-2">
+                                <div class="min-w-0">
+                                    <div class="text-xs font-bold text-slate-300 truncate">${hp.name}</div>
+                                    <div class="text-[10px] text-slate-500">${hp.category}</div>
+                                </div>
+                                <button onclick="toggleProductInLoc(${hp.id}, '${activeLocId}', true)" class="tactile px-2.5 py-1.5 rounded-lg bg-emerald-500 text-slate-950 font-black text-[10px] shrink-0">
+                                    ➕ Ieslēgt šeit
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                </details>
+            ` : '';
+
+            contentEl.innerHTML = activeGroupsHtml + hiddenDrawerHtml + `
                 <button onclick="finishTuesdayInventory()" class="tactile w-full min-h-[58px] rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm px-4 py-3.5 shadow-xl">
                     🏁 Pabeigt Otrdienas inventarizāciju (${loc.shortTitle})
                 </button>
             `;
         }
+
 
         // =========================================================================
         // 3. EKRĀNS: 🔄 LOĢISTIKA (Mobilajam ekrānam sabalansēti izmēri bez pārklāšanās)
@@ -4618,181 +4758,98 @@ function triggerUniversalSave(msg) {
         // 6. POSMA KATALOGA PAPILDINĀŠANA: CSV IMPORTS + r_keeper IMPORTS + JAUNA PRECE
         // =========================================================================
         const DEFAULT_PRODUCT_CATEGORIES = [
-
             '🍺 Alus & Roll-bārs',
-
             '🥃 Stiprais alko',
-
             '🍷 Vīni',
-
             '🍹 Kokteiļu bāzes & Sīrupi',
-
             '🥤 Softi & B/A',
-
             '☕ Kafija & Tēja',
-
             '🍋 Bāra svaigie produkti',
-
             '🥨 Uzkodas',
-
             '🧀 Virtuve & Uzkodas',
-
             '🧴 PET Tara & Saimniecība'
-
         ];
 
-
-
         function getAvailableProductCategories() {
-
             const set = new Set(DEFAULT_PRODUCT_CATEGORIES);
-
             products.forEach(p => {
-
                 if (p && p.category) set.add(p.category.trim());
-
             });
-
             return Array.from(set);
-
         }
-
-
 
         function handleNewProdCatChange(val) {
-
             const customInput = document.getElementById('new-prod-cat-custom');
-
             if (!customInput) return;
-
             if (val === '__CUSTOM__') {
-
                 customInput.classList.remove('hidden');
-
                 customInput.focus();
-
             } else {
-
                 customInput.classList.add('hidden');
-
             }
-
         }
-
-
-
         function handleNewProdBuyTypeChange(val) {
-
             const supInput = document.getElementById('new-prod-sup');
-
             if (!supInput) return;
-
             if (val === 'shop') {
-
                 supInput.value = '🏪 Gemoss';
-
                 supInput.placeholder = 'Izvēlies vai ieraksti veikalu';
-
             } else {
-
                 supInput.value = 'Amber Distribution';
-
                 supInput.placeholder = 'Izvēlies vai ieraksti piegādātāju';
-
             }
-
         }
-
-
-
         function addNewCatalogProductFromUI() {
-
             const name = (document.getElementById('new-prod-name')?.value || '').trim();
-
             const catSelectVal = document.getElementById('new-prod-cat')?.value || '🥤 Softi & B/A';
-
             const customCatVal = (document.getElementById('new-prod-cat-custom')?.value || '').trim();
-
             const category = catSelectVal === '__CUSTOM__' ? (customCatVal || '🥤 Softi & B/A') : catSelectVal;
-
             const buyType = document.getElementById('new-prod-buytype')?.value || 'supplier';
-
             const supOrStore = (document.getElementById('new-prod-sup')?.value || (buyType === 'shop' ? '🏪 Gemoss' : 'Amber Distribution')).trim();
-
             const whMove = (document.getElementById('new-prod-whqty')?.value || '2 kastes').trim();
-
             const barMove = (document.getElementById('new-prod-barqty')?.value || '1 kaste').trim();
-
-
-
             if (!name) {
-
                 showToast('Ieraksti jaunā produkta nosaukumu!', '⚠️');
-
                 return;
-
             }
-
             if (catSelectVal === '__CUSTOM__' && !customCatVal) {
-
                 showToast('Ieraksti savas jaunās kategorijas nosaukumu!', '⚠️');
-
                 return;
-
             }
-
-
-
             const newId = Math.max(...products.map(p => p.id), 200) + 1;
-
             let newProd;
-
             if (typeof buildProductFromCsvParts === 'function') {
-
                 newProd = buildProductFromCsvParts(newId, name, category, buyType, supOrStore, whMove, barMove);
-
             } else {
-
                 newProd = {
-
                     id: newId, name, category, isDaily: false, freshTag: '', rkYesterday: 0, rkSinceCheck: 0, checkedToday: false,
-
                     locs: ['am_bar', 'am_wh', 'gust_bar', 'gust_barn', 'gust_wine'],
-
                     moveQty: { bar: barMove, wine: barMove, wh: whMove },
-
                     thresholds: { wh: { ok: '3+ vien.', low: '1–2 vien.', out: '0' }, bar: { ok: '2+ vien.', low: '1 vien.', out: 'Tukšs' }, wine: { ok: '2+ vien.', low: '1 vien.', out: 'Tukšs' } },
-
                     buyType, storeName: buyType === 'shop' ? supOrStore : '', supplier: supOrStore,
-
                     status: { am_bar: 'ok', am_wh: 'ok', gust_bar: 'ok', gust_barn: 'ok', gust_wine: 'ok', gust_venue: 'ok' }
-
                 };
-
             }
-
-
-
+            const locPreset = document.getElementById('new-prod-locs-preset')?.value || 'ALL';
+            const presetMap = {
+                ALL: ['am_bar', 'am_wh', 'gust_bar', 'gust_barn', 'gust_wine'],
+                GUST_ONLY: ['gust_bar', 'gust_barn'],
+                GUST_AND_WINE: ['gust_bar', 'gust_barn', 'gust_wine'],
+                WINE_ONLY: ['gust_barn', 'gust_wine'],
+                AM_ONLY: ['am_bar', 'am_wh']
+            };
+            newProd.locs = presetMap[locPreset] || presetMap.ALL;
+            
             products.unshift(newProd);
-
             if (typeof ensureAllProductSuppliersRegistered === 'function') {
-
                 ensureAllProductSuppliersRegistered();
-
             } else if (buyType === 'supplier' && !suppliers[supOrStore]) {
-
                 suppliers[supOrStore] = { owner: 'kalvis', phone: '', email: '', greeting: 'Sveiki! Pasūtījums no SIA MŪPA:', closing: 'Paldies!', includeAddress: false, orderState: 'idle', palletSplits: [] };
-
             }
-
-
 
             triggerUniversalSave(`📦 Katalogam pievienots: ${name} (${category})`);
-
             showToast(`Pievienots katalogam: ${name}!`, '📦');
-
             renderAll();
-
         }
 
         function importProductsCsvText() {
@@ -5025,6 +5082,13 @@ function triggerUniversalSave(msg) {
                         </div>
 
                         <button onclick="addNewCatalogProductFromUI()" class="tactile w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow">
+                            <select id="new-prod-locs-preset" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-amber-200 font-bold">
+                            <option value="ALL">📍 Kur tirgo: Visos bāros (A.M + Gust. + Wine)</option>
+                            <option value="GUST_ONLY">🍸 Tikai Gust. kvartālā (3. Gust.bārs + 4. Šķūnis)</option>
+                            <option value="GUST_AND_WINE">🍷 Gust. kvartālā + Wine (3. Gust + 4. Šķūnis + 5. Wine)</option>
+                            <option value="WINE_ONLY">🧀 Tikai 5. Gust.Wine (+ 4. Šķūnis)</option>
+                            <option value="AM_ONLY">🍺 Tikai Alus Muižā (1. A.M bārs + 2. A.M noliktava)</option>
+                        </select>
 
                             ➕ Saglabāt produktu katalogā
 
@@ -5149,133 +5213,66 @@ Fever-Tree;19</textarea>
             }
 
             if (vadibaSubtab === 'TASKS') {
-
                 const activeChkList = getChecklistArrayByTarget(vadibaChecklistTarget);
-
                 container.innerHTML = `
-
                     <div class="bg-[#1e293b] border-2 border-emerald-500/40 rounded-2xl p-4 space-y-3.5 shadow-lg">
-
                         <div>
-
                             <span class="text-[10px] font-black uppercase tracking-wider text-emerald-300">Maiņas & Pasākumu Čeklistes</span>
-
                             <h3 class="text-sm font-black text-white">✅ Čeklistes punktu redaktors</h3>
-
                             <p class="text-[11px] text-slate-400 mt-0.5">Izvēlies telpu vai Venue pasākuma šablonu, lai pievienotu, pārkārtotu vai izdzēstu čeklistes punktus:</p>
-
                         </div>
-
-
-
                         <select onchange="setVadibaChecklistTarget(this.value)" class="w-full bg-slate-950 border-2 border-emerald-500/50 rounded-xl px-3 py-2.5 text-xs text-white font-black focus:outline-none focus:border-emerald-400">
-
                             ${CHECKLIST_TARGETS.map(t => `
-
                                 <option value="${t.key}" ${vadibaChecklistTarget === t.key ? 'selected' : ''}>${t.label} (${getChecklistArrayByTarget(t.key).length})</option>
-
                             `).join('')}
-
                         </select>
-
-
-
                         <div class="flex items-center gap-2">
-
                             <input id="vadiba-chk-new-input" type="text" placeholder="Jauns punkts (piem., Ieslēgt terases sildītājus)"
-
                                 onkeydown="if(event.key==='Enter') addChecklistItemFromInput('${vadibaChecklistTarget}', 'vadiba-chk-new-input')"
-
                                 class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white font-semibold focus:outline-none focus:border-emerald-400">
-
                             <button onclick="addChecklistItemFromInput('${vadibaChecklistTarget}', 'vadiba-chk-new-input')" class="tactile px-3.5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shrink-0 shadow">
-
                                 + Pievienot
-
                             </button>
-
                         </div>
-
-
-
                         <div class="space-y-2">
-
                             ${activeChkList.length === 0
-
                                 ? `<div class="bg-slate-900 rounded-xl p-3 text-center text-xs text-slate-400 font-semibold">Šajā čeklistē vēl nav punktu.</div>`
-
                                 : activeChkList.map((item, idx) => `
-
                                     <div class="bg-slate-900 border border-slate-800 rounded-xl p-2.5 flex items-center gap-2">
-
                                         <div class="flex flex-col gap-1 shrink-0">
-
                                             <button onclick="moveChecklistItem('${vadibaChecklistTarget}', '${item.id}', -1)" ${idx === 0 ? 'disabled' : ''} class="w-6 h-6 rounded bg-slate-800 text-slate-300 text-[11px] font-black disabled:opacity-30">↑</button>
-
                                             <button onclick="moveChecklistItem('${vadibaChecklistTarget}', '${item.id}', 1)" ${idx === activeChkList.length - 1 ? 'disabled' : ''} class="w-6 h-6 rounded bg-slate-800 text-slate-300 text-[11px] font-black disabled:opacity-30">↓</button>
-
                                         </div>
-
                                         <input type="text" value="${escapeHtmlAttr(item.text)}"
-
                                             onchange="updateChecklistItemText('${vadibaChecklistTarget}', '${item.id}', this.value)"
-
                                             class="flex-1 min-w-0 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white font-semibold focus:outline-none focus:border-emerald-400">
-
                                         <button onclick="deleteChecklistItem('${vadibaChecklistTarget}', '${item.id}')" class="tactile px-2.5 py-2 rounded-lg bg-rose-500/20 hover:bg-rose-500/35 text-rose-300 text-xs font-bold shrink-0">
-
                                             🗑️
-
                                         </button>
-
                                     </div>
-
                                 `).join('')
-
                             }
-
                         </div>
-
                     </div>
 
-
-
                     <div class="bg-[#1e293b] border border-slate-700 rounded-2xl p-4 space-y-3">
-
                         <div class="flex justify-between items-center">
-
                             <h3 class="text-sm font-black text-white">🔧 Periodiskie darbi</h3>
-
                             <button onclick="openQuickTaskModal()" class="tactile px-3 py-1.5 rounded-xl bg-indigo-500 text-slate-950 font-black text-xs">+ Jauns darbs</button>
-
                         </div>
-
                         <div class="space-y-2">
-
                             ${periodicTasks.map(t => `
-
                                 <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex justify-between items-center gap-2">
-
                                     <div class="min-w-0">
-
                                         <div class="text-xs font-black text-white break-words">${t.title}</div>
-
                                         <div class="text-[10px] text-slate-400">${getLoc(t.locId).shortTitle} • ${t.freq}</div>
-
                                     </div>
-
                                     <button onclick="deletePeriodicTask('${t.id}')" class="px-2.5 py-1.5 rounded-lg bg-rose-500/20 text-rose-300 text-xs font-bold shrink-0">Dzēst</button>
-
                                 </div>
-
                             `).join('')}
-
                         </div>
-
                     </div>`;
-
                 return;
-
             }
 
             container.innerHTML = Object.entries(suppliers).map(([sName, sup]) => `
